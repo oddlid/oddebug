@@ -23,7 +23,17 @@ import (
 	"strings"
 )
 
+const VERSION string = "2017-07-24"
+
+var (
+	NOOP     bool   = false // set to true if not debugging and you want to speed up funcs that will not be used anyway
+	NOOP_MSG string = "oddebug.NOOP=true"
+)
+
 func DebugParts() (string, string, int) {
+	if NOOP {
+		return NOOP_MSG, "", -1
+	}
 	pc, fn, line, _ := runtime.Caller(1)
 	return runtime.FuncForPC(pc).Name(), fn, line
 }
@@ -37,11 +47,18 @@ func Strip(s, prefix string) string {
 }
 
 func DebugInfo() string {
+	if NOOP {
+		return NOOP_MSG
+	}
 	pc, fn, line, _ := runtime.Caller(1)
 	return fmt.Sprintf("%s[%s:%d]", runtime.FuncForPC(pc).Name(), fn, line)
 }
 
 func DebugInfoMedium(strip string) string {
+	if NOOP {
+		return NOOP_MSG
+	}
+	//fmt.Println("oddebug.DebugInfoMedium() called")
 	var funcname string
 	pc, fn, line, _ := runtime.Caller(1)
 	fname := runtime.FuncForPC(pc).Name()
@@ -54,6 +71,25 @@ func DebugInfoMedium(strip string) string {
 }
 
 func DebugInfoShort() string {
+	if NOOP {
+		return NOOP_MSG
+	}
 	_, fn, line, _ := runtime.Caller(1)
 	return fmt.Sprintf("[%s:%d]", filepath.Base(fn), line)
+}
+
+// DebugForWraps is intended to be used in a wrapper in the calling package, for greater flexibility 
+func DebugForWraps(noop bool, callchain_lvl int, pkg_strip_prefix string, file_basename bool) (funcname, filename string, line int) {
+	if noop {
+		return
+	}
+	pc, filename, line, _ := runtime.Caller(callchain_lvl)
+	funcname = runtime.FuncForPC(pc).Name()
+	if pkg_strip_prefix != "" {
+		funcname = Strip(funcname, pkg_strip_prefix)
+	}
+	if file_basename {
+		filename = filepath.Base(filename)
+	}
+	return
 }
